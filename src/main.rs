@@ -6,8 +6,8 @@ use std::io::{prelude::*, BufReader};
 use std::collections::{HashMap,BTreeMap};
 use std::thread;
 
-static mut max_out_level : u32= 0;
-static mut max_in_level : u32 = 0;
+static mut MAX_OUT_LEVEL : u32= 0;
+static mut MAX_IN_LEVEL : u32 = 0;
 
 #[derive(Debug, Clone)]
 struct Vertex {
@@ -163,16 +163,16 @@ impl Graph {
 			
 //			let spacer = (0..level*5).map(|_| " ").collect::<String>();
 			unsafe {
-			if level > max_out_level {
-				max_out_level = level;
-//					println!("reached level {}", max_out_level);
+			if level > MAX_OUT_LEVEL {
+				MAX_OUT_LEVEL = level;
+//					println!("reached level {}", MAX_OUT_LEVEL);
 			}
 			}
 			
 			// Set current node to explored
 			self.explored.insert(vertex_id,true);
 
-			let mut cur_len : usize = 0;
+			let cur_len: usize;
 		
 			{
 				let group_list = self.start_search.entry(start_vertex).or_insert(Vec::<u32>::new());
@@ -211,9 +211,9 @@ impl Graph {
 			
 //			let spacer = (0..level*5).map(|_| " ").collect::<String>();
 			unsafe {
-			if level > max_in_level {
-				max_in_level = level;
-//				println!("reached level {}", max_in_level);
+			if level > MAX_IN_LEVEL {
+				MAX_IN_LEVEL = level;
+//				println!("reached level {}", MAX_IN_LEVEL);
 			}
 			}
 			

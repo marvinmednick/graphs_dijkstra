@@ -6,6 +6,7 @@ pub struct HeapDataItem<T> {
     data: Box<T>
 }
 
+#[derive(Debug,Clone)]
 pub struct MinHeap<T> {
     pub heap_contents:  Vec::<HeapDataItem<T>>,
     pub index_by_id:   HashMap::<u32,usize>,
@@ -29,14 +30,14 @@ impl<T: std::cmp::PartialOrd+std::fmt::Debug> MinHeap<T> {
         for _i in 0..vec.len() {
             let item = vec.remove(0);
             let new_item = HeapDataItem {id: next_id, data: item};
-            println!("Adding {:?}",new_item);
+            //println!("Adding {:?}",new_item);
             new_heapvec.push(new_item);
             next_id += 1
         }
             
         self.heap_contents = new_heapvec;
-        println!("After set Contents {:?}",self.heap_contents);
-        println!("After set Index {:?}",self.index_by_id);
+        //println!("After set Contents {:?}",self.heap_contents);
+        //println!("After set Index {:?}",self.index_by_id);
     }
     
 
@@ -50,8 +51,8 @@ impl<T: std::cmp::PartialOrd+std::fmt::Debug> MinHeap<T> {
         self.index_by_id.insert(item_id,self.heap_contents.len()-1);
         // fix up the heap
         self.heapify_up(self.heap_contents.len()-1);
-        println!("After insert {:?}",self.heap_contents);
-        println!("After insert Index {:?}",self.index_by_id);
+        //println!("After insert {:?}",self.heap_contents);
+        //println!("After insert Index {:?}",self.index_by_id);
     }
 
     pub fn delete(&mut self, index : usize) {
@@ -79,7 +80,7 @@ impl<T: std::cmp::PartialOrd+std::fmt::Debug> MinHeap<T> {
         
         if let Some(index) = self.index_by_id.get(&id) {
             let item = self.heap_contents.get(*index).clone();
-            println!("get id data id {} data {:?} ",id,item);
+            //println!("get id data id {} data {:?} ",id,item);
             let x = item.unwrap().data.clone();
             Some(*x)
         }
@@ -111,7 +112,7 @@ impl<T: std::cmp::PartialOrd+std::fmt::Debug> MinHeap<T> {
             }
 
         }
-        println!("After update {:?}",self.heap_contents);
+        //println!("After update {:?}",self.heap_contents);
         
     }
 
@@ -122,12 +123,12 @@ impl<T: std::cmp::PartialOrd+std::fmt::Debug> MinHeap<T> {
             let right = self.get_right_child_index(x);
             let left_valid = left.is_none() || *self.heap_contents[left.unwrap()].data >= *self.heap_contents[x].data;
             let right_valid = right.is_none() || *self.heap_contents[right.unwrap()].data >= *self.heap_contents[x].data;
-            println!("Item {} -> left: {:?} right:  {:?} valid: {} {}",x,left,right,left_valid,left_valid);
+            //println!("Item {} -> left: {:?} right:  {:?} valid: {} {}",x,left,right,left_valid,left_valid);
             if !left_valid {
-                    println!("Left invalid")
+                    //println!("Left invalid")
             }
             if !right_valid {
-                    println!("Right invalid")
+                    //println!("Right invalid")
             }
             if !left_valid || !right_valid {
                 println!("INVALID heap");
@@ -138,15 +139,38 @@ impl<T: std::cmp::PartialOrd+std::fmt::Debug> MinHeap<T> {
         return true;
     }
 
-    pub fn get_min(&mut self) -> T {
-        // remove the entry from the heap
-        let retval = self.heap_contents.swap_remove(0);
-        // remove the entry in the index_by_id map
-        self.index_by_id.remove(&retval.id);
-        // fix up the heap
-        self.heapify_down(0);
-        println!("After get_min {:?}",self.heap_contents);
-        *retval.data
+    pub fn get_min(&mut self) -> Option<T> {
+
+        if self.heap_contents.len() > 0 {
+            // remove the entry from the heap
+            let retval = self.heap_contents.swap_remove(0);
+            // remove the entry in the index_by_id map
+            self.index_by_id.remove(&retval.id);
+            // fix up the heap
+            self.heapify_down(0);
+            //println!("After get_min {:?}",self.heap_contents);
+            Some(*retval.data)
+        }
+        else {
+            None
+        }
+    }
+
+    pub fn get_min_entry (&mut self) -> Option<(u32,T)> {
+
+        if self.heap_contents.len() > 0 {
+            // remove the entry from the heap
+            let retval = self.heap_contents.swap_remove(0);
+            // remove the entry in the index_by_id map
+            self.index_by_id.remove(&retval.id);
+            // fix up the heap
+            self.heapify_down(0);
+            //println!("After get_min {:?}",self.heap_contents);
+            Some((retval.id,*retval.data))
+        }
+        else {
+            None
+        }
     }
 
     fn get_parent_index(&self, index: usize) -> Option<usize> {
@@ -363,9 +387,9 @@ mod minheap_tests {
         v.insert(4,Person { name: "Jordana".to_string(), age:10,  rank: 3});
         v.insert(5,Person { name: "Gizmo".to_string(), age:18,  rank:4 });
         assert!(v.validate_heap());
-        assert_eq!(v.get_min().age,10);
-        assert_eq!(v.get_min().age,18);
-        assert_eq!(v.get_min().age,50);
+        assert_eq!(v.get_min().unwrap().age,10);
+        assert_eq!(v.get_min().unwrap().age,18);
+        assert_eq!(v.get_min().unwrap().age,50);
 
     }
 
@@ -383,13 +407,19 @@ mod minheap_tests {
         v.update(1,2);
 
 
-        assert_eq!(v.get_min(),1);
-        assert_eq!(v.get_min(),2);
-        assert_eq!(v.get_min(),3);
-        assert_eq!(v.get_min(),11);
+        assert_eq!(v.get_min(),Some(1));
+        assert_eq!(v.get_min(),Some(2));
+        assert_eq!(v.get_min(),Some(3));
+        assert_eq!(v.get_min(),Some(11));
 
     }
 
+    #[test]
+    fn test_min_entry() {
+        let mut v = setup_basic();
+        assert_eq!(v.get_min_entry(),Some((4,10)));
+        assert_eq!(v.get_min_entry(),Some((5,18)));
+    }
 
     #[test]
     fn test_heap_validate() {
@@ -441,13 +471,13 @@ mod minheap_tests {
         assert_eq!(v.peek_id_data(3),Some(50));
         assert_eq!(v.peek_id_data(4),Some(10));
         assert_eq!(v.peek_id_data(5),Some(18));
-        assert_eq!(v.get_min(),10);
+        assert_eq!(v.get_min(),Some(10));
         assert_eq!(v.peek_id_data(4),None);
         assert_eq!(v.peek_id_data(1),Some(61));
         assert_eq!(v.peek_id_data(2),Some(60));
         assert_eq!(v.peek_id_data(5),Some(18));
         assert_eq!(v.peek_id_data(6),Some(40));
-        assert_eq!(v.get_min(),18);
+        assert_eq!(v.get_min(),Some(18));
         assert_eq!(v.peek_id_data(1),Some(61));
         assert_eq!(v.peek_id_data(2),Some(60));
         assert_eq!(v.peek_id_data(3),Some(50));

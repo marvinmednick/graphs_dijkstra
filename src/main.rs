@@ -1,12 +1,18 @@
-use std::env; use std::process; use std::io::{self, Write}; // use std::error::Error;
+use std::env;
+use std::process; 
+//use std::io::{self, Write}; // use std::error::Error;
 //use std::cmp;
 use std::path::Path;
 use std::fs::File;
 use std::io::{prelude::*, BufReader};
 use std::collections::{HashMap,BTreeMap};
-use std::thread;
+//use std::thread;
 use regex::Regex;
-use std::fmt;
+//use std::fmt;
+
+mod minheap;
+use crate::minheap::MinHeap;
+
 
 static mut MAX_OUT_LEVEL : u32= 0;
 static mut MAX_IN_LEVEL : u32 = 0;
@@ -100,6 +106,8 @@ struct Graph {
 	pub finished_order:  Vec::<u32>,
 	pub start_search:  HashMap::<u32,Vec::<u32>>,
 	top_search_cnts:  HashMap::<u32, usize>,
+    pub unprocessed_vertex : MinHeap::<u32>,
+    pub processed_vertex : HashMap::<u32,u32>,
 }
 
 
@@ -113,6 +121,8 @@ impl Graph {
 				finished_order:  Vec::<u32>::new(),
 				start_search : HashMap::<u32,Vec::<u32>>::new(),
 				top_search_cnts : HashMap::<u32,usize>::new(),
+                unprocessed_vertex : MinHeap::<u32>::new(),
+                processed_vertex : HashMap::<u32,u32>::new(),
 		}
 	}
 
@@ -372,22 +382,82 @@ impl Graph {
 		Ok(())
 
 	}
+
+
+    // dijkstra shortest path
+    pub fn update_scoring(&mut self, id: u32) {
+        println!("Dijsktra scoring {}",id);
+        let adj_vertexes = self.get_outgoing(id);
+        
+        // get the distance/score from the current vertex as the base
+        let cur_vertex_distance = self.processed_vertex.get(&id).unwrap().clone();
+
+        // update each of this nodes adjancent vertexes, if the new distance
+        // is < the current distance
+        for v in adj_vertexes {
+            println!("Dijsktra updating adjacent {:?}",v);
+            // if the adjacent vertex is still in the unprocessed list, then 
+            // update the scoring, otherwise skip it (since its already in the processed list)
+            if let Some(cur_score) = self.unprocessed_vertex.peek_id_data(v.vertex) {
+                let new_score = cur_vertex_distance + v.weight;
+                if new_score < cur_score {
+                    let vertex_index = self.unprocessed_vertex.get_id_index(v.vertex).unwrap();
+                    self.unprocessed_vertex.update(*vertex_index,new_score);
+                }
+             }       
+                
+            
+        }
+
+    }
+
+    pub fn shortest_paths(&mut self, starting_vertex: u32) {
+        println!("Starting shortest path with {}",starting_vertex);
+        if let Some(starting_index) = self.unprocessed_vertex.get_id_index(starting_vertex) {
+
+            self.unprocessed_vertex.delete(*starting_index);
+            
+            // setup the initial distance for the starting vertex to 0 (to itself)
+            self.processed_vertex.insert(starting_vertex,0);
+
+            self.update_scoring(starting_vertex);
+
+            while let Some((next_vertex,next_vertex_score)) = self.unprocessed_vertex.get_min_entry() {
+                println!("Processing vertex {} score: {}",next_vertex,next_vertex_score);
+                self.processed_vertex.insert(next_vertex,next_vertex_score);
+                self.update_scoring(next_vertex);
+            }
+            println!("Final Results {:?}",self.processed_vertex);
+         }       
+        else {
+            println!("Starting vertex {} is not in the graph",starting_vertex);
+        }
+
+    }
+
+    
+
 }
 
 
-
 fn main() {
+
 
 
     let args: Vec<String> = env::args().collect();
 
 	println!("Args {:?} {}",args,args.len());
 
-	if args.len() < 2 { eprintln!("Usage: {} filename <count>", args[0]); process::exit(1); }
+	if args.len() < 2 { eprintln!("Usage: {} filename source_vertex", args[0]); process::exit(1); }
 
+    // 2nd argument is start vertex
+    let starting_vertex = args[2].parse::<u32>().unwrap();
+
+    println!("Calulating shortest path from Vertex {} to all other vertexes",starting_vertex);
   // Create a path to the desired file
     let path = Path::new(&args[1]);
     let display = path.display();
+
 
     // Open the path in read-only mode, returns `io::Result<File>`
     let file = match File::open(&path) {
@@ -408,70 +478,29 @@ fn main() {
         let re_vertex = Regex::new(r"\s*(?P<vertex>\d+)\s+(?P<adjacent_list>.*$)").unwrap();
         // adjacent vertexes are in the format vertex,weight   - and regex below allows for
         // whitespace
-        let re_adjacent = Regex::new(r"\s*(?P<vertex>\d+)\s*,\s*(?P<weight>\d*)").unwrap();
-
         let caps = re_vertex.captures(&line_data).unwrap();
         let text1 = caps.get(1).map_or("", |m| m.as_str());
+        let vertex = text1.parse::<u32>().unwrap();
+
+        let re_adjacent = Regex::new(r"\s*(?P<vertex>\d+)\s*,\s*(?P<weight>\d*)").unwrap();
         let text2 = caps.get(2).map_or("", |m| m.as_str());
         let adj = Vec::<String>::new();
 
-        println!("Vertex:  {}",text1.parse::<u32>().unwrap());
+
+        let mut count =0;
         for caps in re_adjacent.captures_iter(text2) {
-            println!("To: Vertex: {}, weight: {}", &caps["vertex"].parse::<u32>().unwrap(), &caps["weight"].parse::<u32>().unwrap());
+            let dest_vertex = caps["vertex"].parse::<u32>().unwrap(); 
+            let weight = caps["weight"].parse::<u32>().unwrap(); 
+			let _num_edges = g.add_edge(vertex,dest_vertex,weight);
+            count += 1;
+
         }
-        continue;
-
-
-
-		let mut tokens = line_data.split_whitespace();
-		let vertex = tokens.next().unwrap().parse::<u32>().unwrap();
-		let adjacent : Vec<u32> = tokens.map(|x| x.to_string().parse::<u32>().unwrap()).collect();
-		
-
-		let mut other : u32 = 0;
-//		g.create_vertex(&vertex);
-		for other_v in &adjacent {
-
-			other = other_v.clone();
-            let weight = 1;
-			let _num_edges = g.add_edge(vertex,*other_v,weight);
-		
-		}
-		if _count % 100000 == 0 {
-			println!(" {} : {}  from {}  to {}" ,_count,line_data,vertex,other);
-			io::stdout().flush().unwrap();
-		}
-		if _count % 10000 == 0 {
-			print!(".");
-			io::stdout().flush().unwrap();
-		} 
+        println!("Vertex:  {} - {} edges",vertex,count);
+        g.unprocessed_vertex.insert(vertex,100000000);
     }
-	let child = thread::Builder::new().stack_size(512 * 1024 * 1024).spawn(move || { 
-	   // code to be executed in thread
 
-		println!("Read {} lines",_count);
-	//	g.print_vertexes();
-	//	g.dfs_incoming(1,1,0);
-	//	println!("Finish Order {:?}", g.finished_order);
-	//	println!("Starting Vertex {:?}", g.start_search);
-		g.finished_order = Vec::<u32>::new();
-		g.start_search = HashMap::<u32,Vec::<u32>>::new();
-		g.explored = HashMap::<u32,bool>::new();
-		let list : Vec<u32> = g.vertex_map.keys().cloned().collect();
-		g.dfs_loop_incoming(&list);
-	//	println!("Finish Order {:?}", g.finished_order);
-	//	println!("Starting Vertex {:?}", g.start_search);
-		let list : Vec<u32> = g.finished_order.iter().rev().cloned().collect();
-		g.dfs_loop_outgoing(&list);
-		println!("\n Start search has {} entries",g.start_search.len());
-		// println!("\n Start search {:?} entries",g.start_search);
-		println!("\n Top Counts {:?} entries",g.top_search_cnts);
-		let mut top_search_count_vec : Vec::<(u32, usize)> = g.top_search_cnts.iter().map(|(k,v)| (*k, *v)).collect();
-		top_search_count_vec.sort_by(|a, b| b.1.cmp(&a.1));
-		println!("\n Top Counts {:?} entries",top_search_count_vec);
-	}).unwrap(); 
-	child.join().unwrap();
-//	println!("Starting Vertex {:?}", g.start_search);
+    g.shortest_paths(starting_vertex);
+
 }
 
 

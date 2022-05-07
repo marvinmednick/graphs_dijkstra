@@ -78,9 +78,10 @@ impl<T: std::cmp::PartialOrd+std::fmt::Debug> MinHeap<T> {
     where T: Clone
     {
         
+//        println!("Peeking at {}   - heap: {:?}",id,self);
         if let Some(index) = self.index_by_id.get(&id) {
             let item = self.heap_contents.get(*index).clone();
-            //println!("get id data id {} data {:?} ",id,item);
+ //           println!("get id data id {} data {:?} ",id,item);
             let x = item.unwrap().data.clone();
             Some(*x)
         }
@@ -141,15 +142,9 @@ impl<T: std::cmp::PartialOrd+std::fmt::Debug> MinHeap<T> {
 
     pub fn get_min(&mut self) -> Option<T> {
 
-        if self.heap_contents.len() > 0 {
-            // remove the entry from the heap
-            let retval = self.heap_contents.swap_remove(0);
-            // remove the entry in the index_by_id map
-            self.index_by_id.remove(&retval.id);
-            // fix up the heap
-            self.heapify_down(0);
-            //println!("After get_min {:?}",self.heap_contents);
-            Some(*retval.data)
+        // call get_min entry to get the data, but only return the data
+        if let Some(entry) = self.get_min_entry() {
+            Some(entry.1)
         }
         else {
             None
@@ -158,14 +153,18 @@ impl<T: std::cmp::PartialOrd+std::fmt::Debug> MinHeap<T> {
 
     pub fn get_min_entry (&mut self) -> Option<(u32,T)> {
 
+        let heap_size = self.heap_contents.len();
         if self.heap_contents.len() > 0 {
+            let last_entry_id = self.heap_contents[heap_size-1].id;
             // remove the entry from the heap
             let retval = self.heap_contents.swap_remove(0);
             // remove the entry in the index_by_id map
             self.index_by_id.remove(&retval.id);
+            // update the index by id map for the last entry that was swapped
+            self.index_by_id.insert(last_entry_id,0);
             // fix up the heap
             self.heapify_down(0);
-            //println!("After get_min {:?}",self.heap_contents);
+            //println!("After get_min_entry {:?}",self.heap_contents);
             Some((retval.id,*retval.data))
         }
         else {
@@ -247,7 +246,7 @@ impl<T: std::cmp::PartialOrd+std::fmt::Debug> MinHeap<T> {
         let left_index = self.get_left_child_index(index);
         let right_index = self.get_right_child_index(index);
 
-        println!("index {} Left and righ child indexes {:?}, {:?}",index,left_index,right_index);
+//        println!("index {} Left and righ child indexes {:?}, {:?}",index,left_index,right_index);
         if left_index.is_none() {
             None
         }

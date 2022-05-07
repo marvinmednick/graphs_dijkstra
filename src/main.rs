@@ -13,6 +13,10 @@ use regex::Regex;
 mod minheap;
 use crate::minheap::MinHeap;
 
+extern crate clap;
+
+use clap::{Arg, Command};
+
 
 static mut MAX_OUT_LEVEL : u32= 0;
 static mut MAX_IN_LEVEL : u32 = 0;
@@ -386,7 +390,7 @@ impl Graph {
 
     // dijkstra shortest path
     pub fn update_scoring(&mut self, id: u32) {
-        println!("Dijsktra scoring {}",id);
+   //     println!("Dijsktra scoring {}",id);
         let adj_vertexes = self.get_outgoing(id);
         
         // get the distance/score from the current vertex as the base
@@ -395,14 +399,16 @@ impl Graph {
         // update each of this nodes adjancent vertexes, if the new distance
         // is < the current distance
         for v in adj_vertexes {
-            println!("Dijsktra updating adjacent {:?}",v);
+  //          println!("Dijsktra updating adjacent {:?}",v);
             // if the adjacent vertex is still in the unprocessed list, then 
             // update the scoring, otherwise skip it (since its already in the processed list)
             if let Some(cur_score) = self.unprocessed_vertex.peek_id_data(v.vertex) {
                 let new_score = cur_vertex_distance + v.weight;
                 if new_score < cur_score {
+//                    println!("Update scoring on {} from {} to {}",v.vertex,cur_score,new_score);
                     let vertex_index = self.unprocessed_vertex.get_id_index(v.vertex).unwrap();
                     self.unprocessed_vertex.update(*vertex_index,new_score);
+ //                   println!("Unprocessed: {:?}",self.unprocessed_vertex)
                 }
              }       
                 
@@ -427,7 +433,6 @@ impl Graph {
                 self.processed_vertex.insert(next_vertex,next_vertex_score);
                 self.update_scoring(next_vertex);
             }
-            println!("Final Results {:?}",self.processed_vertex);
          }       
         else {
             println!("Starting vertex {} is not in the graph",starting_vertex);
@@ -435,32 +440,106 @@ impl Graph {
 
     }
 
+            
+
     
 
+}
+
+#[derive(Debug)]
+struct CommandArgs  {
+    pub filename: String,
+    pub start_vertex: u32,
+    pub display_dest: Vec::<u32>,
+}
+
+impl CommandArgs  {
+    fn new() -> Self {
+        // basic app information
+        let app = Command::new("dijkstra")
+            .version("1.0")
+            .about("Says hello")
+            .author("Marvin Mednick");
+
+        // Define the name command line option
+        let filename_option = Arg::new("file")
+            .takes_value(true)
+            .help("Input file name")
+            .required(true);
+
+        let starting_option = Arg::new("start")
+            .takes_value(true)
+            .help("Starting Vertex")
+            .required(true);
+
+        let display_option = Arg::new("display")
+            .help("Starting Vertex")
+            .multiple_values(true);
+
+        // now add in the argument we want to parse
+        let mut app = app.arg(filename_option);
+        app = app.arg(starting_option);
+        app = app.arg(display_option);
+
+        // extract the matches
+        let matches = app.get_matches();
+
+        // Extract the actual name
+        let filename = matches.value_of("file")
+            .expect("Filename can't be None, we said it was required");
+
+        let num_str = matches.value_of("start");
+
+        let start = match num_str {
+            None => { println!("Start is None..."); 0},
+            Some(s) => {
+                match s.parse::<u32>() {
+                    Ok(n) => n,
+                    Err(_) => {println!("That's not a number! {}", s); 0},
+                }
+            }
+        };
+        let disp_vertex: Vec<_> = matches.values_of("display")
+                                    .unwrap_or_default()
+                                    .map(|s| s.parse().expect("parse error"))
+                                    .collect();
+
+        println!("clap args: {} {} {:?}",filename, start,disp_vertex);
+
+        CommandArgs { filename: filename.to_string(), start_vertex : start, display_dest: disp_vertex}
+    }   
 }
 
 
 fn main() {
 
 
+    let cmd_line = CommandArgs::new();
+
+    println!("Hello, {:?}!",cmd_line);
+
 
     let args: Vec<String> = env::args().collect();
 
-	println!("Args {:?} {}",args,args.len());
+	println!("My Args {:?} len: {}",args,args.len());
 
 	if args.len() < 2 { eprintln!("Usage: {} filename source_vertex", args[0]); process::exit(1); }
+
+    if args.len() > 2 {
+        let _test = "7,37,59,82,99,115,133,165,188,197";
+    }
 
     // 2nd argument is start vertex
     let starting_vertex = args[2].parse::<u32>().unwrap();
 
-    println!("Calulating shortest path from Vertex {} to all other vertexes",starting_vertex);
+    println!("Calulating shortest path from Vertex {} to all other vertexes",cmd_line.start_vertex);
   // Create a path to the desired file
     let path = Path::new(&args[1]);
     let display = path.display();
 
 
     // Open the path in read-only mode, returns `io::Result<File>`
-    let file = match File::open(&path) {
+    let file = match File::open(&cmd_line.filename) {
         Err(why) => panic!("couldn't open {}: {}", display, why),
         Ok(file) => file,
     };
@@ -500,6 +579,18 @@ fn main() {
     }
 
     g.shortest_paths(starting_vertex);
+
+    if cmd_line.display_dest.len() > 0 {
+        for v in cmd_line.display_dest {
+            println!("v {} - {}", v, g.processed_vertex[&v]);
+        }
+
+    }
+    else {
+        for v in g.vertex_map.keys() {
+            println!("v {} - {}", v, g.processed_vertex[v]);
+        }
+    }
 
 }
 

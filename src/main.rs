@@ -13,9 +13,6 @@ use regex::Regex;
 mod minheap;
 use crate::minheap::MinHeap;
 
-extern crate clap;
-
-use clap::{Arg, Command};
 
 
 static mut MAX_OUT_LEVEL : u32= 0;
@@ -446,6 +443,10 @@ impl Graph {
 
 }
 
+mod cmd_line;
+use crate::cmd_line::CommandArgs;
+
+/*
 #[derive(Debug)]
 struct CommandArgs  {
     pub filename: String,
@@ -509,7 +510,7 @@ impl CommandArgs  {
         CommandArgs { filename: filename.to_string(), start_vertex : start, display_dest: disp_vertex}
     }   
 }
-
+*/
 
 fn main() {
 

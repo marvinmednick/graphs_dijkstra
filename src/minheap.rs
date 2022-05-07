@@ -42,7 +42,7 @@ impl<T: std::cmp::PartialOrd+std::fmt::Debug> MinHeap<T> {
     
 
     pub fn insert(&mut self, item_id: u32, item: T ) {
-    //    println!("Inserting {:?} ****** ",item);
+ //       println!("Inserting {:?} ****** ",item);
         let entry = HeapDataItem { id: item_id, data: Box::<T>::new(item)};
         // add the entry
         self.heap_contents.push(entry);	
@@ -51,16 +51,20 @@ impl<T: std::cmp::PartialOrd+std::fmt::Debug> MinHeap<T> {
         self.index_by_id.insert(item_id,self.heap_contents.len()-1);
         // fix up the heap
         self.heapify_up(self.heap_contents.len()-1);
-        //println!("After insert {:?}",self.heap_contents);
-        //println!("After insert Index {:?}",self.index_by_id);
+//        println!("After insert {:?}",self.heap_contents);
+//        println!("After insert Index {:?}",self.index_by_id);
     }
 
     pub fn delete(&mut self, index : usize) {
         if self.valid_index(index) {
+            // get the current last entry ID which will need to be updated in index_id
+            let last_entry_id = self.heap_contents[self.heap_contents.len()-1].id;
             // get the id of the current entry so the index can be reoved
             let id_to_be_removed = self.heap_contents[index].id.clone();
             // remove the element and put the last one in its place (which will be larger)
             self.heap_contents.swap_remove(index);
+            // update the index by id map for the last entry that was swapped
+            self.index_by_id.insert(last_entry_id,0);
             // fix up the heap
             self.heapify_down(index);
             // remove the id/index entry from the map
@@ -78,10 +82,10 @@ impl<T: std::cmp::PartialOrd+std::fmt::Debug> MinHeap<T> {
     where T: Clone
     {
         
-//        println!("Peeking at {}   - heap: {:?}",id,self);
+//        println!("Peeking at {}   - heap: {:?} len: {}",id,self, self.heap_contents.len());
         if let Some(index) = self.index_by_id.get(&id) {
             let item = self.heap_contents.get(*index).clone();
- //           println!("get id data id {} data {:?} ",id,item);
+//            println!("get id data id {} data {:?} index: {}",id,item,index);
             let x = item.unwrap().data.clone();
             Some(*x)
         }

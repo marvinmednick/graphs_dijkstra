@@ -1,5 +1,5 @@
 //use std::env;
-use std::process; 
+//use std::process; 
 //use std::io::{self, Write}; // use std::error::Error;
 //use std::cmp;
 use std::path::Path;
@@ -406,8 +406,8 @@ impl Graph {
                 let new_score = cur_vertex_distance + v.weight;
                 if new_score < cur_score {
 //                    println!("Update scoring on {} from {} to {}",v.vertex,cur_score,new_score);
-                    let vertex_index = self.unprocessed_vertex.get_id_index(v.vertex).unwrap();
-                    self.unprocessed_vertex.update(*vertex_index,new_score);
+                    let vertex_index = self.unprocessed_vertex.get_id_index(v.vertex).unwrap().clone();
+                    self.unprocessed_vertex.update(vertex_index,new_score);
  //                   println!("Unprocessed: {:?}",self.unprocessed_vertex)
                 }
              }       
@@ -419,9 +419,11 @@ impl Graph {
 
     pub fn shortest_paths(&mut self, starting_vertex: u32) {
         println!("Starting shortest path with {}",starting_vertex);
+
         if let Some(starting_index) = self.unprocessed_vertex.get_id_index(starting_vertex) {
 
-            self.unprocessed_vertex.delete(*starting_index);
+            let index = starting_index.clone();
+            self.unprocessed_vertex.delete(index);
             
             // setup the initial distance for the starting vertex to 0 (to itself)
             self.processed_vertex.insert(starting_vertex,0);
@@ -429,7 +431,7 @@ impl Graph {
             self.update_scoring(starting_vertex);
 
             while let Some((next_vertex,next_vertex_score)) = self.unprocessed_vertex.get_min_entry() {
-                println!("Processing vertex {} score: {}",next_vertex,next_vertex_score);
+ //               println!("Processing vertex {} score: {}",next_vertex,next_vertex_score);
                 self.processed_vertex.insert(next_vertex,next_vertex_score);
                 self.update_scoring(next_vertex);
             }
@@ -486,8 +488,6 @@ fn main() {
 
         let re_adjacent = Regex::new(r"\s*(?P<vertex>\d+)\s*,\s*(?P<weight>\d*)").unwrap();
         let text2 = caps.get(2).map_or("", |m| m.as_str());
-        let adj = Vec::<String>::new();
-
 
         let mut count =0;
         for caps in re_adjacent.captures_iter(text2) {
@@ -505,7 +505,12 @@ fn main() {
 
     if cmd_line.display_dest.len() > 0 {
         for v in cmd_line.display_dest {
-            println!("v {} - {}", v, g.processed_vertex[&v]);
+            if g.processed_vertex.contains_key(&v) {
+                println!("v {} - {}", v, g.processed_vertex.get(&v).unwrap());
+            }
+            else {
+                println!("Dest Vertex {} is invalid",v);
+            }
         }
 
     }

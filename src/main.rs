@@ -519,27 +519,15 @@ fn main() {
     println!("Hello, {:?}!",cmd_line);
 
 
-    let args: Vec<String> = env::args().collect();
-
-	println!("My Args {:?} len: {}",args,args.len());
-
-	if args.len() < 2 { eprintln!("Usage: {} filename source_vertex", args[0]); process::exit(1); }
-
-    if args.len() > 2 {
-        let _test = "7,37,59,82,99,115,133,165,188,197";
-    }
-
-    // 2nd argument is start vertex
-    let starting_vertex = args[2].parse::<u32>().unwrap();
 
     println!("Calulating shortest path from Vertex {} to all other vertexes",cmd_line.start_vertex);
   // Create a path to the desired file
-    let path = Path::new(&args[1]);
+    let path = Path::new(&cmd_line.filename);
     let display = path.display();
 
 
     // Open the path in read-only mode, returns `io::Result<File>`
-    let file = match File::open(&cmd_line.filename) {
+    let file = match File::open(&path) {
         Err(why) => panic!("couldn't open {}: {}", display, why),
         Ok(file) => file,
     };
@@ -578,7 +566,7 @@ fn main() {
         g.unprocessed_vertex.insert(vertex,100000000);
     }
 
-    g.shortest_paths(starting_vertex);
+    g.shortest_paths(cmd_line.start_vertex);
 
     if cmd_line.display_dest.len() > 0 {
         for v in cmd_line.display_dest {

@@ -10,8 +10,8 @@ use std::collections::{HashMap,BTreeMap};
 use regex::Regex;
 //use std::fmt;
 
-mod minheap;
-use crate::minheap::MinHeap;
+extern crate minheap;
+use minheap::MinHeap;
 mod cmd_line;
 use crate::cmd_line::CommandArgs;
 

@@ -8,3 +8,5 @@ edition = "2021"
 [dependencies]
 regex = "1"
 clap = { version = "3.1.17", features = ["derive"] }
+minheap = {path = "../../local/minheap"}
+

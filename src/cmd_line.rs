@@ -7,6 +7,7 @@ pub struct CommandArgs  {
     pub filename: String,
     pub start_vertex: u32,
     pub display_dest: Vec::<u32>,
+    pub short_disp:  bool,
 }
 
 impl CommandArgs  {
@@ -28,14 +29,22 @@ impl CommandArgs  {
             .help("Starting Vertex")
             .required(true);
 
+        let short_display_option = Arg::new("short_disp")
+            .long("short_disp")
+            .short('1')
+            .takes_value(false)
+            .help("Short display: show final weights on one line")
+            .required(true);
+
         let display_option = Arg::new("display")
             .help("Starting Vertex")
             .multiple_values(true);
 
         // now add in the argument we want to parse
-        let mut app = app.arg(filename_option);
-        app = app.arg(starting_option);
-        app = app.arg(display_option);
+        let mut app = app.arg(filename_option)
+                .arg(starting_option)
+                .arg(display_option)
+                .arg(short_display_option);
 
         // extract the matches
         let matches = app.get_matches();
@@ -60,8 +69,11 @@ impl CommandArgs  {
                                     .map(|s| s.parse().expect("parse error"))
                                     .collect();
 
+
+        let short_disp = matches.is_present("short_disp");
+
         println!("clap args: {} {} {:?}",filename, start,disp_vertex);
 
-        CommandArgs { filename: filename.to_string(), start_vertex : start, display_dest: disp_vertex}
+        CommandArgs { filename: filename.to_string(), start_vertex : start, display_dest: disp_vertex, short_disp: short_disp}
     }   
 }

@@ -2,6 +2,7 @@
 //use std::process; 
 //use std::io::{self, Write}; // use std::error::Error;
 //use std::cmp;
+use log::{ info , error ,debug, warn,trace };
 use std::path::Path;
 use std::fs::File;
 use std::io::{prelude::*, BufReader};
@@ -188,98 +189,98 @@ impl Graph {
 
 	pub fn dfs_outgoing(&mut self, vertex_id:  u32, start_vertex: u32, level: u32) {
 			
-//			let spacer = (0..level*5).map(|_| " ").collect::<String>();
-			unsafe {
+        let spacer = (0..level*5).map(|_| " ").collect::<String>();
+        unsafe {
 			if level > MAX_OUT_LEVEL {
 				MAX_OUT_LEVEL = level;
-//					println!("reached level {}", MAX_OUT_LEVEL);
+					warn!("reached level {}", MAX_OUT_LEVEL);
 			}
-			}
+        }
 			
-			// Set current node to explored
-			self.explored.insert(vertex_id,true);
+        // Set current node to explored
+        self.explored.insert(vertex_id,true);
 
-			let cur_len: usize;
-		
-			{
-				let group_list = self.start_search.entry(start_vertex).or_insert(Vec::<u32>::new());
-				group_list.push(vertex_id);
-				cur_len = group_list.len();
-			}
-			self.add_search_entry(start_vertex,cur_len);
+        let cur_len: usize;
+    
+        {
+            let group_list = self.start_search.entry(start_vertex).or_insert(Vec::<u32>::new());
+            group_list.push(vertex_id);
+            cur_len = group_list.len();
+        }
+        self.add_search_entry(start_vertex,cur_len);
 
-			
-			let next_v : Vertex;
+        
+        let next_v : Vertex;
 
-			if let Some(vertex) = self.vertex_map.get(&vertex_id) {
+        if let Some(vertex) = self.vertex_map.get(&vertex_id) {
 
-				next_v = vertex.clone();
-			}
+            next_v = vertex.clone();
+        }
 
-			else {
-				panic!("invalid vertex");
-			}
+        else {
+            panic!("invalid vertex");
+        }
 
-			// Search through each edge
-			for edge in next_v.outgoing.keys() {
-				let next_vertex = edge.vertex.clone();
-				if !self.explored.contains_key(&edge.vertex) {
-					self.dfs_outgoing(next_vertex,start_vertex,level+1);
-				}
-				else {
-			//		println!("{}Vertex {} is already explored",spacer,edge);
-				}
-			}
-			// so add it to the finished list
-			self.finished_order.push(vertex_id);
+        // Search through each edge
+        for edge in next_v.outgoing.keys() {
+            let next_vertex = edge.vertex.clone();
+            if !self.explored.contains_key(&edge.vertex) {
+                self.dfs_outgoing(next_vertex,start_vertex,level+1);
+            }
+            else {
+                trace!("{}Vertex {} is already explored",spacer,edge.vertex);
+            }
+        }
+        // so add it to the finished list
+        self.finished_order.push(vertex_id);
 	}
 
 	pub fn dfs_incoming(&mut self, vertex_id:  u32, start_vertex: u32, level: u32) {
 			
-//			let spacer = (0..level*5).map(|_| " ").collect::<String>();
-			unsafe {
+        let spacer = (0..level*5).map(|_| " ").collect::<String>();
+        unsafe {
 			if level > MAX_IN_LEVEL {
 				MAX_IN_LEVEL = level;
-//				println!("reached level {}", MAX_IN_LEVEL);
+				warn!("reached level {}", MAX_IN_LEVEL);
 			}
-			}
+        }
 			
-			// Set current node to explored
-			self.explored.insert(vertex_id,true);
+        // Set current node to explored
+        self.explored.insert(vertex_id,true);
 
-			let group_list = self.start_search.entry(start_vertex).or_insert(Vec::<u32>::new());
-			group_list.push(vertex_id);
-			let cur_len = group_list.len();
-			self.add_search_entry(start_vertex,cur_len);
+        let group_list = self.start_search.entry(start_vertex).or_insert(Vec::<u32>::new());
+        group_list.push(vertex_id);
+        let cur_len = group_list.len();
+        self.add_search_entry(start_vertex,cur_len);
 
-			let next_v : Vertex;
+        let next_v : Vertex;
 
-			if let Some(vertex) = self.vertex_map.get(&vertex_id) {
+        if let Some(vertex) = self.vertex_map.get(&vertex_id) {
 
-				next_v = vertex.clone();
-			}
+            next_v = vertex.clone();
+        }
 
-			else {
-				panic!("invalid vertex");
-			}
+        else {
+            panic!("invalid vertex");
+        }
 
-			// Search through each edge
-			for edge in next_v.incoming.keys() {
-				let next_vertex = edge.vertex.clone();
-				if !self.explored.contains_key(&edge.vertex) {
-					self.dfs_incoming(next_vertex,start_vertex,level+1);
-				}
-				else {
-			//		println!("{}Vertex {} is already explored",spacer,edge);
-				}
-			}
-			// so add it to the finished list
-			self.finished_order.push(vertex_id);
-	}
+        // Search through each edge
+        for edge in next_v.incoming.keys() {
+            let next_vertex = edge.vertex.clone();
+            if !self.explored.contains_key(&edge.vertex) {
+                self.dfs_incoming(next_vertex,start_vertex,level+1);
+            }
+        else {
+            trace!("{}Vertex {} is already explored",spacer,edge.vertex);
+        }
+    }
+    // so add it to the finished list
+    self.finished_order.push(vertex_id);
+}
 
-	pub fn dfs_loop_incoming(&mut self, list: &Vec<u32>) {
+pub fn dfs_loop_incoming(&mut self, list: &Vec<u32>) {
 
-//		println!("Looping on incoming DFS");
+		debug!("Looping on incoming DFS");
 		self.finished_order = Vec::<u32>::new();
 		self.start_search = HashMap::<u32,Vec::<u32>>::new();
 		self.explored = HashMap::<u32,bool>::new();
@@ -292,7 +293,7 @@ impl Graph {
 				io::stdout().flush().unwrap();
 			} */
 			let vertex = v.clone();
-//			println!("Looping on {}",vertex);
+			info!("Looping on {}",vertex);
 			if !self.explored.contains_key(&vertex) {
 				self.dfs_incoming(vertex,vertex,0);
 			}
@@ -301,7 +302,7 @@ impl Graph {
 	}
 
 	pub fn dfs_loop_outgoing(&mut self, list: &Vec<u32>) {
-//		println!("Looping on outgoing DFS");
+		info!("Looping on outgoing DFS");
 		self.finished_order = Vec::<u32>::new();
 		self.start_search = HashMap::<u32,Vec::<u32>>::new();
 		self.explored = HashMap::<u32,bool>::new();
@@ -314,7 +315,7 @@ impl Graph {
 				io::stdout().flush().unwrap();
 			} */
 			let vertex = v.clone();
-//			println!("Looping on {}",vertex);
+			debug!("Looping on {}",vertex);
 			if !self.explored.contains_key(&vertex) {
 				self.dfs_outgoing(vertex,vertex,0);
 			}
@@ -453,7 +454,7 @@ fn main() {
 
     let cmd_line = CommandArgs::new();
 
-    println!("Hello, {:?}!",cmd_line);
+    info!("Command line is: {:?}!",cmd_line);
 
 
 
@@ -497,7 +498,7 @@ fn main() {
             count += 1;
 
         }
-        println!("Vertex:  {} - {} edges",vertex,count);
+        info!("Vertex:  {} - {} edges",vertex,count);
         g.unprocessed_vertex.insert(vertex,100000000);
     }
 
@@ -506,21 +507,35 @@ fn main() {
     if cmd_line.display_dest.len() > 0 {
         for v in cmd_line.display_dest {
             if g.processed_vertex.contains_key(&v) {
-                println!("v {} - {}", v, g.processed_vertex.get(&v).unwrap());
+                print_vertex_result(&v, g.processed_vertex.get(&v).unwrap(),cmd_line.short_disp);
             }
             else {
-                println!("Dest Vertex {} is invalid",v);
+                error!("Dest Vertex {} is invalid",v);
             }
         }
+        println!();
 
     }
     else {
         for v in g.vertex_map.keys() {
-            println!("v {} - {}", v, g.processed_vertex[v]);
+            print_vertex_result(v, g.processed_vertex.get(&v).unwrap(),cmd_line.short_disp);
         }
+        println!();
     }
 
 }
+
+fn print_vertex_result(vertex: &u32, result: &u32, short: bool) {
+
+    if short {
+        print!("{} ", result);
+    }
+    else {
+        println!("v {} - {}", vertex, result);
+    }
+
+}
+
 
 
 /*

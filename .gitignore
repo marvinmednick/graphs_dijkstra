@@ -14,6 +14,8 @@ Cargo.lock
 
 /target
 
+# link to executable
+dijkstra
 
 # link to test cases
 tcs

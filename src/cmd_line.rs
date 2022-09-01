@@ -5,8 +5,8 @@ use clap::{Arg, Command};
 #[derive(Debug)]
 pub struct CommandArgs  {
     pub filename: String,
-    pub start_vertex: u32,
-    pub display_dest: Vec::<u32>,
+    pub start_vertex: usize,
+    pub display_dest: Vec::<usize>,
     pub short_disp:  bool,
 }
 
@@ -33,8 +33,7 @@ impl CommandArgs  {
             .long("short_disp")
             .short('1')
             .takes_value(false)
-            .help("Short display: show final weights on one line")
-            .required(true);
+            .help("Short display: show final weights on one line");
 
         let display_option = Arg::new("display")
             .help("Starting Vertex")
@@ -58,7 +57,7 @@ impl CommandArgs  {
         let start = match num_str {
             None => { println!("Start is None..."); 0},
             Some(s) => {
-                match s.parse::<u32>() {
+                match s.parse::<usize>() {
                     Ok(n) => n,
                     Err(_) => {println!("That's not a number! {}", s); 0},
                 }
@@ -72,7 +71,7 @@ impl CommandArgs  {
 
         let short_disp = matches.is_present("short_disp");
 
-        println!("clap args: {} {} {:?}",filename, start,disp_vertex);
+//        println!("clap args: {} {} {:?}",filename, start,disp_vertex);
 
         CommandArgs { filename: filename.to_string(), start_vertex : start, display_dest: disp_vertex, short_disp: short_disp}
     }   

@@ -24,24 +24,28 @@ static mut MAX_IN_LEVEL : u32 = 0;
 
 #[derive(Debug, Clone)]
 struct Vertex {
-	vertex_id: u32,
-	incoming: BTreeMap<Edge,u32>,
+	vertex_id: usize,
+    // list of incoming edges along with a count for duplicates
+	incoming: BTreeMap<Edge,usize>,
+    // total count of incoming edges
 	incoming_cnt: usize,
-	outgoing: BTreeMap<Edge,u32>,
+    // list of incoming edges along with a count for duplicates
+	outgoing: BTreeMap<Edge,usize>,
+    // total count of outgoing edges
 	outgoing_cnt: usize,
 }
 
 #[derive(Debug,Clone,Ord,PartialOrd,Eq,PartialEq)]
 struct Edge {
-    vertex: u32,
+    vertex: usize,
     weight: u32
 }
 
 impl Vertex {
 
-	pub fn new(id : &u32) -> Vertex {
-		let incoming = BTreeMap::<Edge,u32>::new();
-		let outgoing = BTreeMap::<Edge,u32>::new();
+	pub fn new(id : &usize) -> Vertex {
+		let incoming = BTreeMap::<Edge,usize>::new();
+		let outgoing = BTreeMap::<Edge,usize>::new();
 		Vertex {vertex_id: id.clone(), 
 				incoming: incoming, 
 				outgoing: outgoing,
@@ -50,14 +54,14 @@ impl Vertex {
 				}
 	}
 	
-	pub fn add_outgoing(&mut self, vertex_id: u32, weight: u32) {
+	pub fn add_outgoing(&mut self, vertex_id: usize, weight: u32) {
         let edge = Edge {vertex: vertex_id, weight: weight };
 		let counter = self.outgoing.entry(edge).or_insert(0);
 		*counter += 1;
 		self.outgoing_cnt += 1;
 	}
 
-	pub fn del_outgoing (&mut self, vertex_id: u32, weight: u32) ->  Result <(), String> {
+	pub fn del_outgoing (&mut self, vertex_id: usize, weight: u32) ->  Result <(), String> {
 
         let edge = Edge {vertex: vertex_id, weight: weight };
 
@@ -75,14 +79,14 @@ impl Vertex {
 		}
 	}
 
-	pub fn add_incoming(&mut self, vertex_id: u32, weight: u32) {
+	pub fn add_incoming(&mut self, vertex_id: usize, weight: u32) {
         let edge = Edge {vertex: vertex_id, weight: weight };
 		let counter = self.incoming.entry(edge).or_insert(0);
 		*counter += 1;
 		self.incoming_cnt += 1;
 	}
 
-	pub fn del_incoming (&mut self, vertex_id: u32, weight: u32) -> Result<(),String> {
+	pub fn del_incoming (&mut self, vertex_id: usize, weight: u32) -> Result<(),String> {
 	
         let edge = Edge {vertex: vertex_id, weight: weight };
 		match self.incoming.get_mut(&edge) {
@@ -105,47 +109,52 @@ impl Vertex {
 
 #[derive(Debug,Clone)]
 struct Graph {
-	vertex_map:  BTreeMap::<u32, Vertex>,
-	edge_count:  u32,
-	explored:  HashMap::<u32,bool>,
-	pub finished_order:  Vec::<u32>,
-	pub start_search:  HashMap::<u32,Vec::<u32>>,
-	top_search_cnts:  HashMap::<u32, usize>,
+    // map from vertex Id to actual Vertex data
+	vertex_map:  BTreeMap::<usize, Vertex>,
+	edge_count:  usize,
+    // map indicating if vertex id has been explored
+	explored:  HashMap::<usize,bool>,
+    // list of vertex ids in order finished processing
+	pub finished_order:  Vec::<usize>,
+	pub start_search:  HashMap::<usize,Vec::<usize>>,
+	top_search_cnts:  HashMap::<usize, usize>,
+    // heap of the unprocessed vertexs by  current score
     pub unprocessed_vertex : MinHeap::<u32>,
-    pub processed_vertex : HashMap::<u32,u32>,
+    // map for all processed vertex from vertex id to its current score
+    pub processed_vertex : HashMap::<usize,u32>,
 }
 
 
 impl Graph {
 	pub fn new() -> Graph {
-		let v_map = BTreeMap::<u32, Vertex>::new();
+		let v_map = BTreeMap::<usize, Vertex>::new();
 		Graph {
 				vertex_map: v_map,
 				edge_count: 0,
-				explored:  HashMap::<u32,bool>::new(),
-				finished_order:  Vec::<u32>::new(),
-				start_search : HashMap::<u32,Vec::<u32>>::new(),
-				top_search_cnts : HashMap::<u32,usize>::new(),
+				explored:  HashMap::<usize,bool>::new(),
+				finished_order:  Vec::<usize>::new(),
+				start_search : HashMap::<usize,Vec::<usize>>::new(),
+				top_search_cnts : HashMap::<usize,usize>::new(),
                 unprocessed_vertex : MinHeap::<u32>::new(),
-                processed_vertex : HashMap::<u32,u32>::new(),
+                processed_vertex : HashMap::<usize,u32>::new(),
 		}
 	}
 
 
-	pub fn get_outgoing(&self, vertex: u32) -> Vec<Edge>{
+	pub fn get_outgoing(&self, vertex: usize) -> Vec<Edge>{
 		let v = self.vertex_map.get(&vertex).unwrap();
 		v.outgoing.keys().cloned().collect()
 		
 	}
 
-	pub fn get_incoming(&self,vertex: u32) -> Vec<Edge> {
+	pub fn get_incoming(&self,vertex: usize) -> Vec<Edge> {
 		let v = self.vertex_map.get(&vertex).unwrap();
 		v.incoming.keys().cloned().collect()
 		
 	}
 
 
-	pub fn get_vertexes(&self) -> Vec<u32> {
+	pub fn get_vertexes(&self) -> Vec<usize> {
 		self.vertex_map.keys().cloned().collect()
 			
 	}
@@ -154,11 +163,12 @@ impl Graph {
 		for (key, value) in &self.vertex_map {
 			let out_list : String = value.outgoing.iter().map(|(x, y)| if y > &1 {format!("{:?}({}) ; ",x,y) } else { format!("{:?} ;",x)}).collect();
 			println!("Vertex {} ({}) :  {}",key,value.vertex_id,out_list);
+            println!("       key {:?}   value {:?}", key, value);
 		}
 					
 	}
 
-	pub fn create_vertex(&mut self,id: &u32) -> Option<usize> {
+	pub fn create_vertex(&mut self,id: &usize) -> Option<usize> {
 
 		if self.vertex_map.contains_key(&id) {
 			None
@@ -170,13 +180,13 @@ impl Graph {
 		}
 	}
 
-	pub fn add_search_entry(&mut self, vertex: u32, count: usize) {
+	pub fn add_search_entry(&mut self, vertex: usize, count: usize) {
 
 			self.top_search_cnts.insert(vertex,count);
 			let mut removed = None;
 			if self.top_search_cnts.len() > 10 {
 				let top_search_iter = self.top_search_cnts.iter();
-				let mut top_search_count_vec : Vec::<(u32, usize)> = top_search_iter.map(|(k,v)| (*k, *v)).collect();
+				let mut top_search_count_vec : Vec::<(usize, usize)> = top_search_iter.map(|(k,v)| (*k, *v)).collect();
 				top_search_count_vec.sort_by(|a, b| b.1.cmp(&a.1));
 				removed = top_search_count_vec.pop();
 			}
@@ -187,7 +197,7 @@ impl Graph {
 			
 	}
 
-	pub fn dfs_outgoing(&mut self, vertex_id:  u32, start_vertex: u32, level: u32) {
+	pub fn dfs_outgoing(&mut self, vertex_id:  usize, start_vertex: usize, level: u32) {
 			
         let spacer = (0..level*5).map(|_| " ").collect::<String>();
         unsafe {
@@ -203,7 +213,7 @@ impl Graph {
         let cur_len: usize;
     
         {
-            let group_list = self.start_search.entry(start_vertex).or_insert(Vec::<u32>::new());
+            let group_list = self.start_search.entry(start_vertex).or_insert(Vec::<usize>::new());
             group_list.push(vertex_id);
             cur_len = group_list.len();
         }
@@ -235,7 +245,7 @@ impl Graph {
         self.finished_order.push(vertex_id);
 	}
 
-	pub fn dfs_incoming(&mut self, vertex_id:  u32, start_vertex: u32, level: u32) {
+	pub fn dfs_incoming(&mut self, vertex_id:  usize, start_vertex: usize, level: u32) {
 			
         let spacer = (0..level*5).map(|_| " ").collect::<String>();
         unsafe {
@@ -248,7 +258,7 @@ impl Graph {
         // Set current node to explored
         self.explored.insert(vertex_id,true);
 
-        let group_list = self.start_search.entry(start_vertex).or_insert(Vec::<u32>::new());
+        let group_list = self.start_search.entry(start_vertex).or_insert(Vec::<usize>::new());
         group_list.push(vertex_id);
         let cur_len = group_list.len();
         self.add_search_entry(start_vertex,cur_len);
@@ -278,13 +288,13 @@ impl Graph {
     self.finished_order.push(vertex_id);
 }
 
-pub fn dfs_loop_incoming(&mut self, list: &Vec<u32>) {
+pub fn dfs_loop_incoming(&mut self, list: &Vec<usize>) {
 
 		debug!("Looping on incoming DFS");
-		self.finished_order = Vec::<u32>::new();
-		self.start_search = HashMap::<u32,Vec::<u32>>::new();
-		self.explored = HashMap::<u32,bool>::new();
-		self.top_search_cnts = HashMap::<u32,usize>::new();
+		self.finished_order = Vec::<usize>::new();
+		self.start_search = HashMap::<usize,Vec::<usize>>::new();
+		self.explored = HashMap::<usize,bool>::new();
+		self.top_search_cnts = HashMap::<usize,usize>::new();
 
 		let mut _count : usize = 0;
 		for v in list {
@@ -301,12 +311,12 @@ pub fn dfs_loop_incoming(&mut self, list: &Vec<u32>) {
 		}
 	}
 
-	pub fn dfs_loop_outgoing(&mut self, list: &Vec<u32>) {
+	pub fn dfs_loop_outgoing(&mut self, list: &Vec<usize>) {
 		info!("Looping on outgoing DFS");
-		self.finished_order = Vec::<u32>::new();
-		self.start_search = HashMap::<u32,Vec::<u32>>::new();
-		self.explored = HashMap::<u32,bool>::new();
-		self.top_search_cnts = HashMap::<u32,usize>::new();
+		self.finished_order = Vec::<usize>::new();
+		self.start_search = HashMap::<usize,Vec::<usize>>::new();
+		self.explored = HashMap::<usize,bool>::new();
+		self.top_search_cnts = HashMap::<usize,usize>::new();
 
 		let mut _count : usize = 0;
 		for v in list {
@@ -322,43 +332,7 @@ pub fn dfs_loop_incoming(&mut self, list: &Vec<u32>) {
 		}
 	}
 
-/*			
-	pub fn DFS2(&mut self, vertex_id:  u32, level: u32) {
-			let spacer = (0..level*5).map(|_| " ").collect::<String>();
-			
-			println!("{}Exploring {}",spacer,vertex_id);
-			// Set current node to explored
-			self.explored.insert(vertex_id,true);
-
-
-			if let Some(vertex) = self.vertex_map.get(&vertex_id) {
-				println!("{}Vertex {:?}",spacer,vertex);
-				println!("{}searching through {:?}",spacer,vertex.outgoing.keys());
-
-				// Search through each edge
-				for edge in vertex.outgoing.keys() {
-					let next_vertex = edge.clone();
-					if !self.explored.contains_key(&edge) {
-						self.DFS(next_vertex,level+1);
-					}
-					else {
-						println!("{}Vertex {} is already explored",spacer,edge);
-					}
-				}
-				//Done with vertex (all outgoing edges explorered
-				// so add it to the finished list
-				self.finished_order.push(vertex_id);
-			}
-
-			else {
-				panic!("invalid vertex");
-			}
-
-	}
-
-*/
-
-	pub fn add_edge(&mut self, v1: u32, v2: u32, weight: u32) -> Option<usize> {
+	pub fn add_edge(&mut self, v1: usize, v2: usize, weight: u32) -> Option<usize> {
 
 		//create the vertexes, if the don't exist
 		self.create_vertex(&v1);
@@ -379,7 +353,7 @@ pub fn dfs_loop_incoming(&mut self, list: &Vec<u32>) {
 
 	}
 
-	pub fn delete_edge(&mut self,v1 : u32, v2 : u32, weight: u32) -> Result<(),String>  {
+	pub fn delete_edge(&mut self,v1 : usize, v2 : usize, weight: u32) -> Result<(),String>  {
 	
 		self.vertex_map.get_mut(&v1).unwrap().del_outgoing(v2,weight)?	;
 		self.vertex_map.get_mut(&v2).unwrap().del_incoming(v1,weight)?;
@@ -390,8 +364,8 @@ pub fn dfs_loop_incoming(&mut self, list: &Vec<u32>) {
 
 
     // dijkstra shortest path
-    pub fn update_scoring(&mut self, id: u32) {
-   //     println!("Dijsktra scoring {}",id);
+    pub fn update_scoring(&mut self, id: usize) {
+        debug!("Dijsktra scoring {}",id);
         let adj_vertexes = self.get_outgoing(id);
         
         // get the distance/score from the current vertex as the base
@@ -400,16 +374,16 @@ pub fn dfs_loop_incoming(&mut self, list: &Vec<u32>) {
         // update each of this nodes adjancent vertexes, if the new distance
         // is < the current distance
         for v in adj_vertexes {
-  //          println!("Dijsktra updating adjacent {:?}",v);
+            debug!("Dijsktra updating adjacent {:?}",v);
             // if the adjacent vertex is still in the unprocessed list, then 
             // update the scoring, otherwise skip it (since its already in the processed list)
             if let Some(cur_score) = self.unprocessed_vertex.peek_id_data(v.vertex) {
                 let new_score = cur_vertex_distance + v.weight;
                 if new_score < cur_score {
-//                    println!("Update scoring on {} from {} to {}",v.vertex,cur_score,new_score);
+                    debug!("Update scoring on {} from {} to {}",v.vertex,cur_score,new_score);
                     let vertex_index = self.unprocessed_vertex.get_id_index(v.vertex).unwrap().clone();
                     self.unprocessed_vertex.update(vertex_index,new_score);
- //                   println!("Unprocessed: {:?}",self.unprocessed_vertex)
+                    trace!("Unprocessed: {:?}",self.unprocessed_vertex)
                 }
              }       
                 
@@ -418,8 +392,8 @@ pub fn dfs_loop_incoming(&mut self, list: &Vec<u32>) {
 
     }
 
-    pub fn shortest_paths(&mut self, starting_vertex: u32) {
-        println!("Starting shortest path with {}",starting_vertex);
+    pub fn shortest_paths(&mut self, starting_vertex: usize) {
+        info!("Starting shortest path with {}",starting_vertex);
 
         if let Some(starting_index) = self.unprocessed_vertex.get_id_index(starting_vertex) {
 
@@ -432,13 +406,13 @@ pub fn dfs_loop_incoming(&mut self, list: &Vec<u32>) {
             self.update_scoring(starting_vertex);
 
             while let Some((next_vertex,next_vertex_score)) = self.unprocessed_vertex.get_min_entry() {
- //               println!("Processing vertex {} score: {}",next_vertex,next_vertex_score);
+                debug!("Processing vertex {} score: {}",next_vertex,next_vertex_score);
                 self.processed_vertex.insert(next_vertex,next_vertex_score);
                 self.update_scoring(next_vertex);
             }
          }       
         else {
-            println!("Starting vertex {} is not in the graph",starting_vertex);
+            error!("Starting vertex {} is not in the graph",starting_vertex);
         }
 
     }
@@ -452,13 +426,14 @@ pub fn dfs_loop_incoming(&mut self, list: &Vec<u32>) {
 fn main() {
 
 
+    env_logger::init();
     let cmd_line = CommandArgs::new();
 
     info!("Command line is: {:?}!",cmd_line);
 
 
 
-    println!("Calulating shortest path from Vertex {} to all other vertexes",cmd_line.start_vertex);
+    info!("Calulating shortest path from Vertex {} to all other vertexes",cmd_line.start_vertex);
   // Create a path to the desired file
     let path = Path::new(&cmd_line.filename);
     let display = path.display();
@@ -485,15 +460,18 @@ fn main() {
         // whitespace
         let caps = re_vertex.captures(&line_data).unwrap();
         let text1 = caps.get(1).map_or("", |m| m.as_str());
-        let vertex = text1.parse::<u32>().unwrap();
+        let vertex = text1.parse::<usize>().unwrap();
+        debug!("Reading connectsion for vertex {}",vertex);
 
         let re_adjacent = Regex::new(r"\s*(?P<vertex>\d+)\s*,\s*(?P<weight>\d*)").unwrap();
         let text2 = caps.get(2).map_or("", |m| m.as_str());
+        trace!("Adjacency info: {}",text2);
 
         let mut count =0;
         for caps in re_adjacent.captures_iter(text2) {
-            let dest_vertex = caps["vertex"].parse::<u32>().unwrap(); 
+            let dest_vertex = caps["vertex"].parse::<usize>().unwrap(); 
             let weight = caps["weight"].parse::<u32>().unwrap(); 
+            debug!("Adding connection from {} to {} with weight {}",vertex,dest_vertex,weight);
 			let _num_edges = g.add_edge(vertex,dest_vertex,weight);
             count += 1;
 
@@ -505,7 +483,12 @@ fn main() {
     g.shortest_paths(cmd_line.start_vertex);
 
     if cmd_line.display_dest.len() > 0 {
+        let mut is_first = true;
         for v in cmd_line.display_dest {
+            if !is_first{
+                print!(",");
+            }
+            is_first = false;
             if g.processed_vertex.contains_key(&v) {
                 print_vertex_result(&v, g.processed_vertex.get(&v).unwrap(),cmd_line.short_disp);
             }
@@ -525,10 +508,10 @@ fn main() {
 
 }
 
-fn print_vertex_result(vertex: &u32, result: &u32, short: bool) {
+fn print_vertex_result(vertex: &usize, result: &u32, short: bool) {
 
     if short {
-        print!("{} ", result);
+        print!("{}", result);
     }
     else {
         println!("v {} - {}", vertex, result);
